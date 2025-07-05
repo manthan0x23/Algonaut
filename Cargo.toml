@@ -1,0 +1,9 @@
+[workspace]
+members = [ "common", "database", "redis","server", "worker"]
+resolver = "3"
+
+
+[workspace.package]
+homepage = "https://manthansharma.in/"
+
+[workspace.metadata]

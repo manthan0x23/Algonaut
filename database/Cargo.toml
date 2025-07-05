@@ -2,5 +2,6 @@
 name = "database"
 version = "0.1.0"
 edition = "2024"
+homepage.workspace = true
 
 [dependencies]
