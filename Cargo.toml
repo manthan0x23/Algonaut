@@ -1,5 +1,5 @@
 [workspace]
-members = [ "common", "database", "redis","server", "worker"]
+members = ["common", "database", "redis", "server", "worker"]
 resolver = "3"
 
 
