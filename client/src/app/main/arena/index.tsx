@@ -4,12 +4,12 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { defineMinimalMonacoTheme } from "@/integrations/monaco/theme";
-import { themeStore } from "@/store/theme-store";
+import { useThemeStore } from "@/store/theme-store";
+
 import * as Editor from "@monaco-editor/react";
-import { useStore } from "@tanstack/react-store";
 
 export const ArenaPage = () => {
-  const { theme } = useStore(themeStore);
+  const { theme } = useThemeStore();
   const handleBeforeMount = (monaco: any) => {
     defineMinimalMonacoTheme(monaco);
   };

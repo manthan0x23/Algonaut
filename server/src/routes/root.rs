@@ -1,7 +1,18 @@
-use actix_web::web::{self, scope};
+use crate::{
+    middlewares::auth_middleware,
+    routes::{authentication::auth::auth_routes, verify},
+};
+use actix_web::{
+    middleware::from_fn,
+    web::{self, scope},
+};
 
-use crate::routes::verify;
-
-pub fn app_root(web_service: &mut web::ServiceConfig) {
-    web_service.service(verify);
+pub fn app_root(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        scope("/auth").configure(auth_routes).service(
+            web::resource("/verify")
+                .wrap(from_fn(auth_middleware))
+                .route(web::get().to(verify)),
+        ),
+    );
 }

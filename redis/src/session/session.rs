@@ -10,7 +10,7 @@ use serde_json;
 use crate::connect::connect_via_pool;
 
 fn generate_session_key_from_id(id: &str) -> SessionId {
-    format!("session:{}", id)
+    format!("algonaut:session:{}", id)
 }
 
 pub async fn get_user_session(

@@ -1,3 +1,4 @@
+use common::id::short_id;
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(DeriveMigrationName)]
@@ -9,11 +10,14 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(Post::Table)
+                    .table(User::Table)
                     .if_not_exists()
-                    .col(pk_auto(Post::Id))
-                    .col(string(Post::Title))
-                    .col(string(Post::Text))
+                    .col(string(User::Id).primary_key().not_null().unique_key())
+                    .col(string(User::Email).not_null().unique_key())
+                    .col(string_null(User::Name))
+                    .col(string_null(User::AvatarUrl))
+                    .col(timestamp(User::CreatedAt).default(Expr::current_timestamp()))
+                    .col(big_integer(User::Credits).default(Expr::value(0)))
                     .to_owned(),
             )
             .await
@@ -21,15 +25,18 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(Post::Table).to_owned())
+            .drop_table(Table::drop().table(User::Table).to_owned())
             .await
     }
 }
 
 #[derive(DeriveIden)]
-enum Post {
+pub enum User {
     Table,
     Id,
-    Title,
-    Text,
+    Name,
+    Email,
+    AvatarUrl,
+    CreatedAt,
+    Credits,
 }

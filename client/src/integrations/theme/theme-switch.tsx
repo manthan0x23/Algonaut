@@ -1,12 +1,13 @@
-import { themeStore, type ThemeType } from "@/store/theme-store";
-import { useStore } from "@tanstack/react-store";
 import { useEffect } from "react";
 import { Moon, SunDim } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useThemeStore, type ThemeType } from "@/store/theme-store";
+import { cn } from "@/lib/utils";
 
 export const ThemeSwitch = ({ className }: { className?: string }) => {
-  const { theme } = useStore(themeStore);
+  const theme = useThemeStore((state) => state.theme);
+  const setTheme = useThemeStore((state) => state.setTheme);
 
   useEffect(() => {
     const savedTheme =
@@ -17,7 +18,7 @@ export const ThemeSwitch = ({ className }: { className?: string }) => {
 
     const thusTheme: ThemeType = savedTheme == "dark" ? "dark" : "light";
 
-    themeStore.setState(() => ({ theme: thusTheme }));
+    setTheme(thusTheme);
     if (savedTheme === "dark") {
       document.documentElement.classList.add("dark");
     } else {
@@ -29,9 +30,7 @@ export const ThemeSwitch = ({ className }: { className?: string }) => {
     const nextTheme = theme === "dark" ? "light" : "dark";
 
     document.cookie = `theme=${nextTheme}; path=/; max-age=31536000`;
-    themeStore.setState(() => ({
-      theme: nextTheme,
-    }));
+    setTheme(nextTheme);
 
     if (nextTheme === "dark") {
       document.documentElement.classList.add("dark");
@@ -41,7 +40,7 @@ export const ThemeSwitch = ({ className }: { className?: string }) => {
   };
 
   return (
-    <div className="flex items-center space-x-2">
+    <div className={cn("flex items-center space-x-2", className)}>
       <Label htmlFor="airplane-mode" className="capitalize">
         {theme === "dark" ? <Moon size={17} /> : <SunDim size={17} />}
       </Label>

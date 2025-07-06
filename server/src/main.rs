@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_web::{
     App, HttpServer,
     middleware::Logger,
@@ -9,22 +10,26 @@ use tracing_subscriber;
 
 mod health_check;
 
-mod utils;
 mod routes;
+mod utils;
 use utils::app_state::AppState;
+mod middlewares;
 
 use crate::utils::app_state::AppEnv;
 
 fn configure_env() {
     dotenv::dotenv().ok();
 
+    // Set default log level if not already set
     if env::var_os("RUST_LOG").is_none() {
         unsafe {
-            env::set_var("RUST_LOG", "info,actix_web=info");
+            env::set_var("RUST_LOG", "debug,actix_web=info");
         }
     }
 
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .init();
 }
 
 #[actix_web::main]
@@ -73,6 +78,14 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(app_state.clone())
+            .wrap(
+                Cors::default()
+                    .allowed_origin(&app_env.client_url)
+                    .allow_any_method()
+                    .allow_any_header()
+                    .supports_credentials()
+                    .max_age(3600),
+            )
             .wrap(Logger::default())
             .service(health_check::health_check)
             .service(scope("api").configure(routes::app_root))

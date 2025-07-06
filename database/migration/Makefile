@@ -2,7 +2,7 @@ generate-entity:
 	sea-orm-cli generate entity -o ../src/entity/
 
 migrate-db:
-	RUST_LOG=trace cargo run
+	cargo run
 
 create-migration:
 	@if [ -z "$(name)" ]; then \
