@@ -37,7 +37,7 @@ impl ResponseError for AppError {
     }
 }
 
-#[warn(unused_assignments)]
+#[allow(dead_code)]
 impl AppError {
     pub fn bad_request(message: &str) -> Self {
         Self::new(StatusCode::BAD_REQUEST, message)

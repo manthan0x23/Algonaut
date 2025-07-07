@@ -90,7 +90,6 @@ async fn main() -> std::io::Result<()> {
             .service(health_check::health_check)
             .service(scope("api").configure(routes::app_root))
     })
-    .workers(2)
     .bind(bind_server)?
     .run()
     .await

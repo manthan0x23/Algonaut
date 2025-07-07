@@ -1,6 +1,6 @@
 use crate::{
     middlewares::auth_middleware,
-    routes::{authentication::auth::auth_routes, verify},
+    routes::{authentication::auth::auth_routes, rooms::room_routes, verify},
 };
 use actix_web::{
     middleware::from_fn,
@@ -14,5 +14,6 @@ pub fn app_root(cfg: &mut web::ServiceConfig) {
                 .wrap(from_fn(auth_middleware))
                 .route(web::get().to(verify)),
         ),
-    );
+    )
+    .configure(room_routes);
 }

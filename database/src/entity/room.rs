@@ -2,8 +2,11 @@
 
 use super::sea_orm_active_enums::RoomScopeTypeEnum;
 use sea_orm::entity::prelude::*;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
+pub const PAGE_SIZE: u64 = 10;
+
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
 #[sea_orm(table_name = "room")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
@@ -13,6 +16,7 @@ pub struct Model {
     pub capacity: i32,
     pub editors_scope_type: RoomScopeTypeEnum,
     pub code: Option<String>,
+    pub code_language: Option<String>,
     pub allowed_viewers: Vec<String>,
     pub viewers_scope_type: RoomScopeTypeEnum,
     pub allowed_editors: Vec<String>,

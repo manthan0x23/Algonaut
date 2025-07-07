@@ -11,6 +11,7 @@ pub struct AppState {
 }
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub struct AppEnv {
     pub database_url: String,
     pub redis_url: String,

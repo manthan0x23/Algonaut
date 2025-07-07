@@ -1,3 +1,5 @@
+use core::fmt;
+
 use serde::{Deserialize, Serialize};
 
 use crate::id::ShortId;
@@ -19,4 +21,21 @@ pub struct SessionClaim {
     pub user: UserPayload,
     pub uid: ShortId,
     pub ip: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum UserRoomType {
+    Viewer,
+    Editor,
+}
+
+impl fmt::Display for UserRoomType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            UserRoomType::Viewer => "viewer",
+            UserRoomType::Editor => "editor",
+        };
+        write!(f, "{}", s)
+    }
 }

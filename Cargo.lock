@@ -829,6 +829,7 @@ dependencies = [
  "rand_core 0.9.3",
  "serde",
  "serde_json",
+ "validator",
 ]
 
 [[package]]
@@ -973,6 +974,8 @@ dependencies = [
  "migration",
  "sea-orm",
  "sea-orm-migration",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

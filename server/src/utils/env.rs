@@ -13,6 +13,7 @@ fn must_var_default<T: std::str::FromStr>(key: &str, default: T) -> T {
         .unwrap_or(default)
 }
 
+#[allow(dead_code)]
 fn must_parse<T: std::str::FromStr>(key: &str) -> T {
     env::var(key)
         .unwrap_or_else(|_| panic!("{} is required in the environment", key))

@@ -38,6 +38,7 @@ impl MigrationTrait for Migration {
                         .default(RoomScopeTypeVariants::Strict.to_string()),
                     )
                     .col(string_null(Room::Code).null())
+                    .col(string_null(Room::CodeLanguage))
                     .col(
                         array(Room::AllowedViewers, ColumnType::String(StringLen::Max))
                             .not_null()
@@ -79,6 +80,7 @@ pub enum Room {
     Alias,
     Objective,
     Code,
+    CodeLanguage,
     Capacity,
     AllowedEditors,
     EditorsScopeType,

@@ -8,9 +8,9 @@ type Props = {
 export const ProfileImage = ({ image, size }: Props) => {
   return (
     <Avatar>
-      <AvatarImage sizes={size} src={image} />
+      <AvatarImage fetchPriority="high" src={image} />
       <AvatarFallback>
-        <AvatarImage src={"default-icon.jpg"} />
+        <AvatarImage fetchPriority="high" src={"default-icon.jpg"} />
       </AvatarFallback>
     </Avatar>
   );
