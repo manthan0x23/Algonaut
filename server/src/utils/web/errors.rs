@@ -1,4 +1,4 @@
-use actix_web::{HttpResponse, ResponseError, http::StatusCode};
+use actix_web::{HttpResponse, Responder, ResponseError, http::StatusCode};
 use std::fmt;
 
 use crate::utils::web::response::ApiResponse;

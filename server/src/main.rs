@@ -1,7 +1,8 @@
+use actix::{Actor, Addr};
 use actix_cors::Cors;
 use actix_web::{
     App, HttpServer,
-    middleware::Logger,
+    middleware::{Logger, from_fn},
     web::{self, scope},
 };
 use std::env;
@@ -9,13 +10,17 @@ use tracing::{error, info};
 use tracing_subscriber;
 
 mod health_check;
-
 mod routes;
 mod utils;
 use utils::app_state::AppState;
 mod middlewares;
+mod websocket;
 
-use crate::utils::app_state::AppEnv;
+use crate::{
+    middlewares::auth_middleware,
+    utils::app_state::AppEnv,
+    websocket::{models::lobby::Lobby, ws_handler},
+};
 
 fn configure_env() {
     dotenv::dotenv().ok();
@@ -69,10 +74,13 @@ async fn main() -> std::io::Result<()> {
         info!("Connected to Redis server");
     }
 
+    let lobby: Addr<Lobby> = Lobby::new().start();
+
     let app_state = web::Data::new(AppState {
         database: db,
         redis_pool: redis_pool,
         env: app_env.clone(),
+        lobby: lobby,
     });
 
     HttpServer::new(move || {
@@ -89,8 +97,14 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .service(health_check::health_check)
             .service(scope("api").configure(routes::app_root))
+            .service(
+                scope("ws")
+                    .wrap(from_fn(auth_middleware))
+                    .route("{room_id}", web::get().to(ws_handler)),
+            )
     })
     .bind(bind_server)?
+    .worker_max_blocking_threads(1)
     .run()
     .await
 }

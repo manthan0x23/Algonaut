@@ -16,7 +16,13 @@ const verifyAuthenticationCall = (): Promise<SessionClaim> =>
     .then((res) => res.data.data);
 
 export const useVerifyAuthentication = () => {
-  const { data, isLoading, isError } = useQuery({
+  const setSession = useAuthStore((s) => s.setSession);
+  const setError = useAuthStore((s) => s.setError);
+  const setLoading = useAuthStore((s) => s.setLoading);
+  const clearError = useAuthStore((s) => s.clearError);
+  const reset = useAuthStore((s) => s.reset);
+
+  const query = useQuery({
     queryKey: ["api", "auth", "verify"],
     queryFn: verifyAuthenticationCall,
     retry: 1,
@@ -27,18 +33,20 @@ export const useVerifyAuthentication = () => {
     refetchOnReconnect: true,
   });
 
-  const setSession = useAuthStore((s) => s.setSession);
-  const setError = useAuthStore((s) => s.setError);
-  const setLoading = useAuthStore((s) => s.setLoading);
+  useEffect(() => {
+    setLoading(query.isLoading);
+  }, [query.isLoading, setLoading]);
 
   useEffect(() => {
-    setLoading(isLoading);
-
-    if (data) {
-      setSession(data);
+    if (query.isSuccess && query.data) {
+      setSession(query.data);
+      clearError();
     }
+  }, [query.isSuccess, query.data, setSession, clearError]);
 
-    if (isError) {
+  useEffect(() => {
+    if (query.isError) {
+      reset();
       setError("Authentication failed or session expired");
 
       const popupShown = Cookies.get("login_popup_shown");
@@ -55,7 +63,10 @@ export const useVerifyAuthentication = () => {
         });
       }
     }
-  }, [data, isLoading, isError, setSession, setError, setLoading]);
+  }, [query.isError, reset, setError]);
 
-  return { user: data, isLoading, isError };
+  return {
+    user: query.data,
+    ...query,
+  };
 };

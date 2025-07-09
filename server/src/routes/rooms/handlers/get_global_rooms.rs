@@ -103,5 +103,5 @@ pub async fn get_global_rooms(
         total_pages,
     };
 
-    Ok(ApiResponse::ok("Fetched global rooms", response).respond(StatusCode::FOUND))
+    Ok(ApiResponse::ok("Fetched global rooms", response).respond(StatusCode::OK))
 }

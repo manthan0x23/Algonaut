@@ -13,3 +13,6 @@ pub fn validate_room_scope_type(val: &RoomScopeType) -> Result<(), ValidationErr
         RoomScopeType::Open | RoomScopeType::Strict => Ok(()),
     }
 }
+
+/// Alias for `room_id`
+pub type RoomId = String;

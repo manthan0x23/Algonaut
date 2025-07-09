@@ -1,4 +1,3 @@
-use common::id::short_id;
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(DeriveMigrationName)]

@@ -26,6 +26,7 @@ pub struct SessionClaim {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum UserRoomType {
+    Creator,
     Viewer,
     Editor,
 }
@@ -33,6 +34,7 @@ pub enum UserRoomType {
 impl fmt::Display for UserRoomType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
+            UserRoomType::Creator => "creator",
             UserRoomType::Viewer => "viewer",
             UserRoomType::Editor => "editor",
         };

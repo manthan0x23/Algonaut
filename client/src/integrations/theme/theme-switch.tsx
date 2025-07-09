@@ -14,7 +14,7 @@ export const ThemeSwitch = ({ className }: { className?: string }) => {
       document.cookie
         .split("; ")
         .find((row) => row.startsWith("theme="))
-        ?.split("=")[1] ?? "light";
+        ?.split("=")[1] ?? "dark";
 
     const thusTheme: ThemeType = savedTheme == "dark" ? "dark" : "light";
 

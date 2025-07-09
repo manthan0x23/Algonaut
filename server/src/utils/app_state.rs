@@ -1,13 +1,15 @@
+use actix::Addr;
 use redis::connect::RedisConnectionPool;
 use sea_orm::DatabaseConnection;
 
-use crate::utils::env::*;
+use crate::{utils::env::*, websocket::models::lobby::Lobby};
 
 #[derive(Clone, Debug)]
 pub struct AppState {
     pub database: DatabaseConnection,
     pub redis_pool: RedisConnectionPool,
     pub env: AppEnv,
+    pub lobby: Addr<Lobby>,
 }
 
 #[derive(Clone, Debug)]

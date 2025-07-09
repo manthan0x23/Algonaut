@@ -4,7 +4,7 @@ use super::sea_orm_active_enums::RoomScopeTypeEnum;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-pub const PAGE_SIZE: u64 = 10;
+pub const PAGE_SIZE: u64 = 8;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
 #[sea_orm(table_name = "room")]

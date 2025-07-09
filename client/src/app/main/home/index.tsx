@@ -1,4 +1,8 @@
 import { FlipWords } from "@/components/ui/flip-words";
+import { QuickAccessCard } from "./_components/quick-access/main";
+import { useState } from "react";
+import { CreateSpace } from "./_components/create-space/main";
+import { JoinSpace } from "./_components/join-space/main";
 
 const features = [
   "Instant Setup: Spin up a new arena in one click.",
@@ -11,9 +15,14 @@ const writingText =
   "Join private coding arenas and solve algorithms collaboratively. One file. Real-time editing. No setup overhead.";
 
 export const HomePage = () => {
+  const [createOpen, setCreateOpen] = useState(false);
+  const [joinOpen, setJoinOpen] = useState(false);
+
   return (
     <div className="flex h-full w-full text-foreground">
-     <section className="w-1/2 h-full px-[10vw] flex flex-col justify-center">
+      <CreateSpace open={createOpen} setOpen={setCreateOpen} />
+      <JoinSpace open={joinOpen} setOpen={setJoinOpen} />
+      <section className="w-1/2 h-full px-[10vw] flex flex-col justify-center">
         <h1>Algonaut</h1>
         <p className="mt-2 font-normal text-muted-foreground">
           Sharpen your algorithm skills—together.
@@ -23,9 +32,12 @@ export const HomePage = () => {
 
         <FlipWords words={features} className="p-0 mt-6" />
       </section>
-
-      {/* Right Panel */}
-      <section />
+      <section className="w-1/2 h-full flex items-center justify-center">
+        <QuickAccessCard
+          setCreateOpen={setCreateOpen}
+          setJoinOpen={setJoinOpen}
+        />
+      </section>
     </div>
   );
 };

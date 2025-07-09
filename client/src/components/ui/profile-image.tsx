@@ -10,7 +10,7 @@ export const ProfileImage = ({ image, size }: Props) => {
     <Avatar>
       <AvatarImage fetchPriority="high" src={image} />
       <AvatarFallback>
-        <AvatarImage fetchPriority="high" src={"default-icon.jpg"} />
+        <AvatarImage fetchPriority="high" src={"default-profile.png"} />
       </AvatarFallback>
     </Avatar>
   );

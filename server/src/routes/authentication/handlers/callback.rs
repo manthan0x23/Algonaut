@@ -1,9 +1,6 @@
 use crate::utils::{app_state::AppState, web::errors::AppError};
 use actix_web::{
-    HttpRequest, HttpResponse,
-    cookie::{Cookie, SameSite},
-    get,
-    web::{Data, Query},
+    cookie::{Cookie, SameSite}, get, web::{Data, Query}, HttpRequest, HttpResponse, Responder
 };
 use common::{
     id::short_id,
@@ -25,7 +22,7 @@ pub async fn callback(
     req: HttpRequest,
     query: Query<CallbackQuery>,
     app_state: Data<AppState>,
-) -> Result<HttpResponse, AppError> {
+) -> impl Responder {
     let db = &app_state.database;
     let redis_pool = &app_state.redis_pool;
     let code = &query.code;
@@ -151,7 +148,7 @@ pub async fn callback(
         .path("/")
         .http_only(true)
         .secure(app_state.env.cargo_env == "production")
-        .same_site(SameSite::Lax)
+        .same_site(SameSite::None)
         .finish();
 
     let client_url = &app_state.env.client_url;

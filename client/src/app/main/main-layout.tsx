@@ -1,7 +1,7 @@
 import { BackgroundBeams } from "@/components/ui/background-beams";
 import { ThemeSwitch } from "@/integrations/theme/theme-switch";
-import { Outlet, useLocation } from "@tanstack/react-router";
-import { Binary } from "lucide-react";
+import { Link, Outlet, useLocation } from "@tanstack/react-router";
+import { PiGraph } from "react-icons/pi";
 import { AuthOption } from "./auth";
 
 const Layout = () => {
@@ -12,7 +12,9 @@ const Layout = () => {
       {pathname == "/" && <BackgroundBeams className="-z-40" />}
       <section className="h-[7%] w-full flex items-center justify-between px-6 bg-background">
         <div>
-          <Binary />
+          <Link to="/" reloadDocument>
+            <PiGraph className="cursor-pointer" size={30} />
+          </Link>
         </div>
         <div className="flex gap-5 items-center h-full  text-xs">
           <ThemeSwitch className="my-auto" />

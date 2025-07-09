@@ -18,18 +18,22 @@ use crate::utils::{
 };
 
 #[derive(Debug, Deserialize, Validate)]
-#[allow(dead_code)]
 pub struct GetRoomsQuery {
     #[validate(range(min = 1))]
     pub page: Option<u64>,
-
     pub only_created: Option<bool>,
     pub only_joined: Option<bool>,
 }
 
 #[derive(Serialize, Debug)]
+pub struct RoomWithRole {
+    pub room: Room::Model,
+    pub role: String, // "creator" | "editor" | "viewer"
+}
+
+#[derive(Serialize, Debug)]
 pub struct GetRoomsResponse {
-    pub rooms: Vec<Room::Model>,
+    pub rooms: Vec<RoomWithRole>,
     pub total_items: u64,
     pub total_pages: u64,
 }
@@ -44,6 +48,7 @@ pub async fn get_rooms_for_user(
         .map_err(|e| AppError::bad_request(&e.to_string()))?;
 
     let uid = session.uid.clone();
+    let email = session.user.email.clone();
     let page = query.page.unwrap_or(1);
     let only_created = query.only_created.unwrap_or(false);
     let only_joined = query.only_joined.unwrap_or(false);
@@ -60,6 +65,7 @@ pub async fn get_rooms_for_user(
         if only_created || (!only_created && !only_joined) {
             c = c.add(Room::Column::CreatedBy.eq(uid.clone()));
         }
+
         if only_joined || (!only_created && !only_joined) {
             let sub_query = UserRoom::Entity::find()
                 .select_only()
@@ -68,6 +74,7 @@ pub async fn get_rooms_for_user(
                 .into_query();
             c = c.add(Room::Column::Id.in_subquery(sub_query));
         }
+
         c
     };
 
@@ -90,12 +97,34 @@ pub async fn get_rooms_for_user(
         .await
         .map_err(|e| AppError::internal_server_error(&format!("fetch error: {}", e)))?;
 
+    let rooms_with_roles: Vec<RoomWithRole> = rooms
+        .into_iter()
+        .map(|room| {
+            let role = if room.created_by == uid {
+                "creator"
+            } else if room
+                .allowed_editors
+                .iter()
+                .any(|v| v == &email || v == &uid)
+            {
+                "editor"
+            } else {
+                "viewer"
+            };
+
+            RoomWithRole {
+                room,
+                role: role.to_string(),
+            }
+        })
+        .collect();
+
     let json = GetRoomsResponse {
-        rooms,
+        rooms: rooms_with_roles,
         total_items,
         total_pages,
     };
 
     let resp: ApiResponse<GetRoomsResponse> = ApiResponse::ok("Fetched rooms", json);
-    Ok(resp.respond(StatusCode::FOUND))
+    Ok(resp.respond(StatusCode::OK))
 }
