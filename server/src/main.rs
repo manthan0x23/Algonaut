@@ -5,6 +5,7 @@ use actix_web::{
     middleware::{Logger, from_fn},
     web::{self, scope},
 };
+use common::storage::AwsS3;
 use std::env;
 use tracing::{error, info};
 use tracing_subscriber;
@@ -76,11 +77,28 @@ async fn main() -> std::io::Result<()> {
 
     let lobby: Addr<Lobby> = Lobby::new().start();
 
+    let storage = match AwsS3::new(
+        app_env.aws_region.clone(),
+        app_env.aws_access_key.clone(),
+        app_env.aws_secret_key.clone(),
+        app_env.aws_s3_bucket_name.clone(),
+        app_env.aws_cloud_front_distribution_url.clone(),
+    )
+    .await
+    {
+        Ok(store) => store,
+        Err(err) => {
+            error!("{:?}", err);
+            panic!("{:?}", err);
+        }
+    };
+
     let app_state = web::Data::new(AppState {
         database: db,
         redis_pool: redis_pool,
         env: app_env.clone(),
         lobby: lobby,
+        storage: storage,
     });
 
     HttpServer::new(move || {

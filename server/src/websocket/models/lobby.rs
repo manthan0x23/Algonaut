@@ -1,15 +1,18 @@
 use actix::{Actor, Addr, Context, Message};
 use common::{
     id::ShortId,
-    types::{room::RoomId, session::SessionClaim},
+    types::{
+        room::RoomId,
+        session::{SessionClaim, UserRoomType},
+    },
 };
 use std::{collections::HashMap, ops::Add};
 
-use crate::websocket::models::connection::WsConnection;
+use crate::websocket::models::{connection::WsConnection, outgoing::RoomMember};
 
 #[derive(Clone, Debug)]
 pub struct Lobby {
-    pub rooms: HashMap<RoomId, HashMap<ShortId, Addr<WsConnection>>>,
+    pub rooms: HashMap<RoomId, HashMap<ShortId, (Addr<WsConnection>, RoomMember)>>,
 }
 
 #[derive(Message, Debug, Clone)]
@@ -19,6 +22,7 @@ pub struct Connect {
     pub room: String,
     pub connection: SessionClaim,
     pub addr: Addr<WsConnection>,
+    pub role: UserRoomType,
 }
 
 #[derive(Message, Debug, Clone)]

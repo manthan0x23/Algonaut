@@ -1,4 +1,5 @@
 use actix::Addr;
+use common::storage::AwsS3;
 use redis::connect::RedisConnectionPool;
 use sea_orm::DatabaseConnection;
 
@@ -10,6 +11,7 @@ pub struct AppState {
     pub redis_pool: RedisConnectionPool,
     pub env: AppEnv,
     pub lobby: Addr<Lobby>,
+    pub storage: AwsS3,
 }
 
 #[derive(Clone, Debug)]

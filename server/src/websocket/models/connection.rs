@@ -8,7 +8,6 @@ use common::{
     },
 };
 use std::time::{Duration, Instant};
-
 use crate::websocket::models::lobby::{Connect, Disconnect, Lobby};
 
 pub const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -65,6 +64,7 @@ impl Actor for WsConnection {
             room: self.room.clone(),
             connection: self.session.clone(),
             addr: ctx.address(),
+            role: self.role.clone(),
         });
     }
 

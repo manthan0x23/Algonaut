@@ -1,3 +1,5 @@
+pub mod outgoing;
+
 use actix::Message;
 
 #[derive(Message)]
