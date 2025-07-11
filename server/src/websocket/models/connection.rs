@@ -1,15 +1,15 @@
-use actix::{Actor, ActorContext, Addr, AsyncContext, StreamHandler};
+use actix::{Actor, ActorContext, Addr, AsyncContext};
 use actix_web_actors::ws;
 use common::{
     id::{ShortId, short_id},
     types::{
-        room::{RoomId, RoomScopeType},
+        room::RoomId,
         session::{SessionClaim, UserRoomType},
     },
 };
 use std::time::{Duration, Instant};
 
-use crate::websocket::models::lobby::{Disconnect, Lobby};
+use crate::websocket::models::lobby::{Connect, Disconnect, Lobby};
 
 pub const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 pub const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -59,12 +59,20 @@ impl Actor for WsConnection {
 
     fn started(&mut self, ctx: &mut Self::Context) {
         self.start_heartbeat(ctx);
+
+        self.lobby.do_send(Connect {
+            id: self.id.clone(),
+            room: self.room.clone(),
+            connection: self.session.clone(),
+            addr: ctx.address(),
+        });
     }
 
     fn stopped(&mut self, _: &mut Self::Context) {
         self.lobby.do_send(Disconnect {
             id: self.id.clone(),
             room: self.room.clone(),
+            session: self.session.clone(),
         });
     }
 }

@@ -8,7 +8,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ProfileImage } from "@/components/ui/profile-image";
-import { Spinner } from "@/components/ui/spinner";
 import { Env } from "@/lib/env";
 import { useAuthStore } from "@/store/auth-store";
 import { ChevronDown } from "lucide-react";
@@ -49,7 +48,7 @@ export const AuthOption = () => {
           size={"sm"}
           variant={"outline"}
           onClick={loginWithGoogle}
-          className="my-auto"
+          className="my-auto outline"
           disabled={isLoading}
         >
           <FcGoogle />

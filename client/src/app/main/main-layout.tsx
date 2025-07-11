@@ -10,7 +10,7 @@ const Layout = () => {
   return (
     <div className="h-screen w-screen antialiased relative">
       {pathname == "/" && <BackgroundBeams className="-z-40" />}
-      <section className="h-[7%] w-full flex items-center justify-between px-6 bg-background">
+      <section className="h-[7%] w-full flex items-center justify-between px-6">
         <div>
           <Link to="/" reloadDocument>
             <PiGraph className="cursor-pointer" size={30} />
