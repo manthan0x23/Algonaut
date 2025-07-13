@@ -148,7 +148,7 @@ pub async fn callback(
         .path("/")
         .http_only(true)
         .secure(app_state.env.cargo_env == "production")
-        .same_site(SameSite::None)
+        .same_site(SameSite::Lax)
         .finish();
 
     let client_url = &app_state.env.client_url;

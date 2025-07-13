@@ -75,8 +75,6 @@ async fn main() -> std::io::Result<()> {
         info!("Connected to Redis server");
     }
 
-    let lobby: Addr<Lobby> = Lobby::new().start();
-
     let storage = match AwsS3::new(
         app_env.aws_region.clone(),
         app_env.aws_access_key.clone(),
@@ -92,10 +90,12 @@ async fn main() -> std::io::Result<()> {
             panic!("{:?}", err);
         }
     };
+    let lobby: Addr<Lobby> =
+        Lobby::new(&db.clone(), &redis_pool, &app_env.clone(), &storage.clone()).start();
 
     let app_state = web::Data::new(AppState {
-        database: db,
-        redis_pool: redis_pool,
+        database: db.clone(),
+        redis_pool: redis_pool.clone(),
         env: app_env.clone(),
         lobby: lobby,
         storage: storage,

@@ -13,6 +13,8 @@ import * as Editor from "@monaco-editor/react";
 import { useParams } from "@tanstack/react-router";
 import { ArenaPanel } from "./_components/panel";
 import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
+import { WebSocketConnection } from "@/integrations/ws";
 
 export const ArenaPage = () => {
   const { roomId } = useParams({
@@ -24,6 +26,12 @@ export const ArenaPage = () => {
     defineMinimalMonacoTheme(monaco);
   };
 
+  useEffect(() => {
+    const ws = new WebSocketConnection(roomId);
+
+    ws.connect();
+  }, [roomId]);
+
   const monacoTheme = theme === "dark" ? "vs-dark" : "light";
 
   return (
@@ -32,7 +40,6 @@ export const ArenaPage = () => {
         <ResizablePanelGroup direction="horizontal" className="h-full">
           <ResizablePanel defaultSize={70} minSize={50}>
             <div className="h-full flex flex-col">
-              {/* Editor Header */}
               <div className="h-12 border-b bg-muted/30 flex items-center justify-between px-4">
                 <div className="flex items-center">
                   <AlignLeft className="h-4 w-4 text-muted-foreground" />
@@ -47,7 +54,6 @@ export const ArenaPage = () => {
                 </div>
               </div>
 
-              {/* Editor Content */}
               <div className="flex-1 bg-background">
                 <Editor.Editor
                   beforeMount={handleBeforeMount}

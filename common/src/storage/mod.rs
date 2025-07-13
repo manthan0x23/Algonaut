@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use aws_config::SdkConfig;
+use aws_config::{BehaviorVersion, SdkConfig};
 use aws_sdk_s3::{
     Client,
     config::{Credentials, Region, SharedCredentialsProvider},
@@ -28,16 +28,18 @@ impl AwsS3 {
 
         let credentials_provider = SharedCredentialsProvider::new(credentials);
 
-        let config = SdkConfig::builder()
+        // ✅ FIX: Provide BehaviorVersion when building config
+        let config = aws_config::defaults(BehaviorVersion::latest())
             .region(Region::new(region))
             .credentials_provider(credentials_provider)
-            .build();
+            .load()
+            .await;
 
         let client = Client::new(&config);
 
         Ok(Self {
             client,
-            bucket: bucket.to_string(),
+            bucket,
             cdn_base_url,
         })
     }
@@ -81,6 +83,6 @@ impl AwsS3 {
     }
 
     pub fn get_cdn_url(&self, key: String) -> String {
-        format!("{}/{}", self.cdn_base_url, key)
+        format!("{}/{}", self.cdn_base_url.trim_end_matches('/'), key)
     }
 }

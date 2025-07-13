@@ -1,6 +1,11 @@
 use actix_web::{HttpResponse, web};
-use common::{id::short_id, types::session::SessionClaim};
-use database::entity::{room as Room, sea_orm_active_enums::RoomScopeTypeEnum, user as User};
+use common::{
+    id::short_id,
+    types::session::{SessionClaim, UserRoomType},
+};
+use database::entity::{
+    room as Room, sea_orm_active_enums::RoomScopeTypeEnum, user as User, user_room as UserRoom,
+};
 use reqwest::StatusCode;
 use sea_orm::{
     ActiveValue::Set, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect,
@@ -108,10 +113,25 @@ pub async fn create_room(
         ..Default::default()
     };
 
+    let create_user_room: UserRoom::ActiveModel = UserRoom::ActiveModel {
+        id: Set(short_id(None)),
+        user_id: Set(user.id.clone()),
+        room_id: create_room.id.clone(),
+        r#type: Set(UserRoomType::Creator.to_string()),
+        status: Set("joined".to_string()),
+    };
+
     Room::Entity::insert(create_room)
         .exec(&txn)
         .await
         .map_err(|e| AppError::internal_server_error(&format!("Failed to create room: {}", e)))?;
+
+    UserRoom::Entity::insert(create_user_room)
+        .exec(&txn)
+        .await
+        .map_err(|e| {
+            AppError::internal_server_error(&format!("Failed to create user_room: {}", e))
+        })?;
 
     txn.commit().await.map_err(|e| {
         AppError::internal_server_error(&format!("Failed to commit transaction: {}", e))

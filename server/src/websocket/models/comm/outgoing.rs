@@ -1,5 +1,12 @@
+use core::fmt;
+use std::fmt::Display;
+
 use chrono::{DateTime, Utc};
-use common::{id::ShortId, types::session::UserRoomType};
+use common::{
+    id::ShortId,
+    types::session::{UserMinimal, UserRoomType},
+};
+use database::entity;
 use serde::{Deserialize, Serialize};
 
 /// 16 zeros string with a hash `#0000000000000000`
@@ -12,14 +19,16 @@ pub enum OutgoingMessageIden {
     Chat,
     Execution,
     RoomMembers,
+    Error,
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum OutgoingMessage {
     Broadcast(Broadcast),
-    Chat(Chat),
+    Chat(OutgoingChat),
     RoomMembers(RoomMembers),
+    Error(OutgoingError),
 }
 
 // ----------------- MEMBERS -----------------
@@ -67,16 +76,14 @@ impl Broadcast {
 // ----------------- CHAT -----------------
 
 #[derive(Serialize, Deserialize)]
-pub struct Chat {
-    iden: OutgoingMessageIden,
-    r#type: ChatType,
-    message: Option<String>,
-    from: ShortId,
-    message_type: ChatMessageType,
-    url: Option<String>,
-    text: Option<String>,
-    blob: Option<Vec<u8>>,
-    timestamp: DateTime<Utc>,
+pub struct OutgoingChat {
+    pub iden: OutgoingMessageIden,
+    pub r#type: ChatType,
+
+    #[serde(flatten)]
+    pub chat: entity::chat::Model,
+
+    pub sender: UserMinimal,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -86,7 +93,7 @@ pub enum ChatType {
     Message,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ChatMessageType {
     Text,
@@ -96,66 +103,45 @@ pub enum ChatMessageType {
     Image,
 }
 
-impl Chat {
-    fn new(
-        r#type: ChatType,
-        message: Option<String>,
-        from: ShortId,
-        message_type: ChatMessageType,
-        url: Option<String>,
-        text: Option<String>,
-        blob: Option<Vec<u8>>,
-        timestamp: DateTime<Utc>,
-    ) -> Self {
+impl Display for ChatMessageType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let as_str = match self {
+            ChatMessageType::Text => "text",
+            ChatMessageType::Video => "video",
+            ChatMessageType::Audio => "audio",
+            ChatMessageType::File => "file",
+            ChatMessageType::Image => "image",
+        };
+        write!(f, "{}", as_str)
+    }
+}
+
+impl OutgoingChat {
+    pub fn new(chat: entity::chat::Model, sender: UserMinimal, chat_type: ChatType) -> Self {
         Self {
             iden: OutgoingMessageIden::Chat,
-            r#type,
-            message,
-            from,
-            message_type,
-            url,
-            text,
-            blob,
-            timestamp,
+            r#type: chat_type,
+            chat,
+            sender,
         }
     }
+}
 
-    pub fn text_message(from: ShortId, text: String) -> Self {
-        Self::new(
-            ChatType::Message,
-            Some(text.clone()),
-            from,
-            ChatMessageType::Text,
-            None,
-            Some(text),
-            None,
-            Utc::now(),
-        )
-    }
+// ----------------- ERROR -----------------
 
-    pub fn file_mssg(from: ShortId, file: String, r#type: ChatMessageType) -> Self {
-        Self::new(
-            ChatType::Message,
-            None,
-            from,
-            r#type,
-            Some(file),
-            None,
-            None,
-            Utc::now(),
-        )
-    }
+#[derive(Serialize, Deserialize)]
+pub struct OutgoingError {
+    pub iden: OutgoingMessageIden,
+    pub message: String,
+    pub errors: Vec<String>,
+}
 
-    pub fn announce(text: String) -> Self {
-        Self::new(
-            ChatType::Announcement,
-            Some(text.clone()),
-            SYSTEM_ID.to_string(),
-            ChatMessageType::Text,
-            None,
-            Some(text),
-            None,
-            Utc::now(),
-        )
+impl OutgoingError {
+    pub fn new(message: impl Into<String>, errors: Vec<String>) -> Self {
+        Self {
+            iden: OutgoingMessageIden::Error,
+            message: message.into(),
+            errors,
+        }
     }
 }

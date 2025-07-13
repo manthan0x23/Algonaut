@@ -1,24 +1,35 @@
-use actix::{Actor, Addr, Context, Message};
+use actix::{Actor, Addr, Context, Handler, Message, MessageResult};
 use common::{
     id::ShortId,
+    storage::AwsS3,
     types::{
         room::RoomId,
-        session::{SessionClaim, UserRoomType},
+        session::{SessionClaim, UserMinimal, UserRoomType},
     },
 };
-use std::{collections::HashMap, ops::Add};
+use redis::connect::RedisConnectionPool;
+use sea_orm::DatabaseConnection;
+use std::collections::HashMap;
 
-use crate::websocket::models::{connection::WsConnection, outgoing::RoomMember};
+use crate::{
+    utils::app_state::AppEnv,
+    websocket::models::{connection::WsConnection, incomming::IncomingChat, outgoing::RoomMember},
+};
+
+pub type Room = HashMap<ShortId, (Addr<WsConnection>, RoomMember)>;
 
 #[derive(Clone, Debug)]
 pub struct Lobby {
-    pub rooms: HashMap<RoomId, HashMap<ShortId, (Addr<WsConnection>, RoomMember)>>,
+    pub rooms: HashMap<RoomId, Room>,
+    pub database: DatabaseConnection,
+    pub redis_pool: RedisConnectionPool,
+    pub env: AppEnv,
+    pub storage: AwsS3,
 }
 
 #[derive(Message, Debug, Clone)]
 #[rtype(result = "()")]
 pub struct Connect {
-    pub id: ShortId,
     pub room: String,
     pub connection: SessionClaim,
     pub addr: Addr<WsConnection>,
@@ -28,15 +39,31 @@ pub struct Connect {
 #[derive(Message, Debug, Clone)]
 #[rtype(result = "()")]
 pub struct Disconnect {
-    pub id: ShortId,
     pub room: String,
     pub session: SessionClaim,
 }
 
+#[derive(Message, Debug, Clone)]
+#[rtype(result = "()")]
+pub struct HandleChat {
+    pub chat_data: IncomingChat,
+    pub sender: UserMinimal,
+    pub room_id: RoomId,
+}
+
 impl Lobby {
-    pub fn new() -> Self {
+    pub fn new(
+        db: &DatabaseConnection,
+        redis: &RedisConnectionPool,
+        env: &AppEnv,
+        storage: &AwsS3,
+    ) -> Self {
         Self {
             rooms: HashMap::new(),
+            database: db.clone(),
+            redis_pool: redis.clone(),
+            env: env.clone(),
+            storage: storage.clone(),
         }
     }
 }
