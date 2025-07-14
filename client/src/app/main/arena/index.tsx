@@ -1,41 +1,37 @@
-"use client";
-
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Card } from "@/components/ui/card";
-import { defineMinimalMonacoTheme } from "@/integrations/monaco/theme";
-import { useThemeStore } from "@/store/theme-store";
 import { AlignLeft, Braces } from "lucide-react";
-import * as Editor from "@monaco-editor/react";
 import { useParams } from "@tanstack/react-router";
 import { ArenaPanel } from "./_components/panel";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
-import { WebSocketConnection } from "@/integrations/ws";
+import { ThemeSwitch } from "@/integrations/theme/theme-switch";
+import { useGetChats } from "./chat/use-get-chats";
+import { CollaborativeEditor } from "./editor";
+import { WsClient } from "@/integrations/ws";
 
 export const ArenaPage = () => {
   const { roomId } = useParams({
-    from: "/_layout/arena/$roomId",
+    from: "/arena/$roomId",
   });
-  const { theme } = useThemeStore();
 
-  const handleBeforeMount = (monaco: any) => {
-    defineMinimalMonacoTheme(monaco);
-  };
+  const { isLoading: _chatsLoading } = useGetChats();
+  const ws = WsClient.getInstance();
 
   useEffect(() => {
-    const ws = new WebSocketConnection(roomId);
-
-    ws.connect();
+    ws.connect(roomId);
+    return () => {
+      ws.disconnect();
+    };
   }, [roomId]);
 
-  const monacoTheme = theme === "dark" ? "vs-dark" : "light";
-
   return (
-    <div className="h-full w-full p-4 pt-0">
+    <div className="h-screen w-sceen p-4">
+      <ThemeSwitch />
       <Card className="h-full w-full overflow-hidden">
         <ResizablePanelGroup direction="horizontal" className="h-full">
           <ResizablePanel defaultSize={70} minSize={50}>
@@ -55,27 +51,7 @@ export const ArenaPage = () => {
               </div>
 
               <div className="flex-1 bg-background">
-                <Editor.Editor
-                  beforeMount={handleBeforeMount}
-                  height="100%"
-                  defaultLanguage="cpp"
-                  defaultValue={roomId}
-                  theme={monacoTheme}
-                  options={{
-                    fontSize: 14,
-                    fontFamily:
-                      'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                    minimap: { enabled: false },
-                    wordWrap: "on",
-                    scrollBeyondLastLine: false,
-                    tabSize: 2,
-                    lineNumbers: "on",
-                    renderWhitespace: "selection",
-                    smoothScrolling: true,
-                    cursorBlinking: "smooth",
-                    padding: { top: 16, bottom: 16 },
-                  }}
-                />
+                <CollaborativeEditor />
               </div>
             </div>
           </ResizablePanel>

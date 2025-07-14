@@ -5,7 +5,13 @@ import { Label } from "@/components/ui/label";
 import { useThemeStore, type ThemeType } from "@/store/theme-store";
 import { cn } from "@/lib/utils";
 
-export const ThemeSwitch = ({ className }: { className?: string }) => {
+export const ThemeSwitch = ({
+  className,
+  showSwitch = false,
+}: {
+  className?: string;
+  showSwitch?: boolean;
+}) => {
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
 
@@ -38,6 +44,10 @@ export const ThemeSwitch = ({ className }: { className?: string }) => {
       document.documentElement.classList.remove("dark");
     }
   };
+
+  if (!showSwitch) {
+    return null;
+  }
 
   return (
     <div className={cn("flex items-center space-x-2", className)}>

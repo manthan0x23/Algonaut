@@ -26,7 +26,6 @@ use crate::{
 fn configure_env() {
     dotenv::dotenv().ok();
 
-    // Set default log level if not already set
     if env::var_os("RUST_LOG").is_none() {
         unsafe {
             env::set_var("RUST_LOG", "debug,actix_web=info");
@@ -122,7 +121,7 @@ async fn main() -> std::io::Result<()> {
             )
     })
     .bind(bind_server)?
-    .worker_max_blocking_threads(1)
+    .workers(1)
     .run()
     .await
 }

@@ -19,6 +19,7 @@ pub enum OutgoingMessageIden {
     Chat,
     Execution,
     RoomMembers,
+    CrdtUpdate,
     Error,
 }
 
@@ -142,6 +143,23 @@ impl OutgoingError {
             iden: OutgoingMessageIden::Error,
             message: message.into(),
             errors,
+        }
+    }
+}
+
+// ----------------- CRDT -----------------
+
+#[derive(Serialize, Deserialize)]
+pub struct OutgoingCrdtUpdate {
+    pub iden: OutgoingMessageIden,
+    pub update: Vec<Vec<u8>>,
+}
+
+impl OutgoingCrdtUpdate {
+    pub fn new(update: Vec<Vec<u8>>) -> Self {
+        Self {
+            iden: OutgoingMessageIden::CrdtUpdate,
+            update,
         }
     }
 }

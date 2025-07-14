@@ -10,6 +10,7 @@ use actix::{AsyncContext, Handler};
 use common::id::{ShortId, short_id};
 use database::entity::chat::{ActiveModel as ChatModel, Model as ChatModelFull};
 use sea_orm::{ActiveModelTrait, Set};
+use tracing::debug;
 
 impl Handler<HandleChat> for Lobby {
     type Result = ();
@@ -22,14 +23,14 @@ impl Handler<HandleChat> for Lobby {
         let chat_data = msg.chat_data.clone();
 
         let room_id = msg.room_id.clone();
-        let room = match self.rooms.get(&room_id) {
+        let (room, _doc) = match self.rooms.get(&room_id) {
             Some(r) => r.clone(),
             None => return,
         };
 
         ctx.spawn(actix::fut::wrap_future::<_, Self>(async move {
             let (sender_ws, _) = match room.get(&uid) {
-                Some(ws) => ws,
+                Some(ws_ref) => ws_ref.clone(),
                 None => return,
             };
 
@@ -38,7 +39,7 @@ impl Handler<HandleChat> for Lobby {
                     let message_text = match &chat_data.text {
                         Some(text) if !text.trim().is_empty() => text.clone(),
                         _ => {
-                            send_error(sender_ws, "Text cannot be empty").await;
+                            send_error(&sender_ws, "Text cannot be empty").await;
                             return;
                         }
                     };
@@ -48,7 +49,7 @@ impl Handler<HandleChat> for Lobby {
                     let file_key = match &chat_data.url {
                         Some(key) if !key.trim().is_empty() => key.clone(),
                         _ => {
-                            send_error(sender_ws, "Url key cannot be empty").await;
+                            send_error(&sender_ws, "Url key cannot be empty").await;
                             return;
                         }
                     };
@@ -70,7 +71,7 @@ impl Handler<HandleChat> for Lobby {
             let inserted: ChatModelFull = match active_chat.insert(&db).await {
                 Ok(model) => model,
                 Err(e) => {
-                    send_error(sender_ws, &format!("Database error: {}", e)).await;
+                    send_error(&sender_ws, &format!("Database error: {}", e)).await;
                     return;
                 }
             };
@@ -80,12 +81,14 @@ impl Handler<HandleChat> for Lobby {
             let json = match serde_json::to_string(&outgoing) {
                 Ok(data) => data,
                 Err(e) => {
-                    send_error(sender_ws, &format!("Serialization error: {}", e)).await;
+                    send_error(&sender_ws, &format!("Serialization error: {}", e)).await;
                     return;
                 }
             };
 
-            for (_peer_uid, (ws_conn, _)) in room.iter() {
+            for entry in room.iter() {
+                let (_peer_uid, (ws_conn, mm)) = entry;
+                debug!("TO :: {:?}", mm);
                 if ws_conn.send(WsText(json.clone())).await.is_err() {
                     continue;
                 }

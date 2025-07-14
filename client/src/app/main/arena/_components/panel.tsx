@@ -1,5 +1,3 @@
-"use client";
-
 import {
   FileText,
   Users,
@@ -21,6 +19,24 @@ import { cn } from "@/lib/utils";
 import { SideBarParamEnum, type SideBarOption } from "./dto";
 import { useEffect } from "react";
 import { toast } from "sonner";
+import { ChatSection } from "../chat";
+import { z } from "zod/v4";
+
+export const ChatSchema = z.object({
+  id: z.string(),
+  room_id: z.string(),
+  user_id: z.string(),
+  message: z.string(),
+  message_type: z.enum(["text", "image", "file", "video", "audio"]),
+  created_at: z.string(),
+  updated_at: z.string(),
+
+  sender: z.object({
+    uid: z.string(),
+    name: z.string().optional(),
+    email: z.string(),
+  }),
+});
 
 const options: SideBarOption[] = [
   { title: "Space", param: "space", icon: FileText },
@@ -33,11 +49,11 @@ const options: SideBarOption[] = [
 
 export const ArenaPanel = () => {
   const { roomId } = useParams({
-    from: "/_layout/arena/$roomId",
+    from: "/arena/$roomId",
   });
   const router = useRouter();
   const params = useSearch({
-    from: "/_layout/arena/$roomId",
+    from: "/arena/$roomId",
   }) as { tab: SideBarOption["param"][number] };
 
   useEffect(() => {
@@ -66,9 +82,9 @@ export const ArenaPanel = () => {
             {params.tab || "Select a tab"}
           </span>
         </div>
-        <div className="p-4">
-          <div className="text-center text-muted-foreground">
-            {params.tab ? (
+        <div className="h-[93%]">
+          {params.tab == "chat" && <ChatSection />}
+          {/* {params.tab ? (
               <div className="space-y-2">
                 <div className="text-lg font-medium capitalize">
                   {params.tab}
@@ -79,8 +95,7 @@ export const ArenaPanel = () => {
               </div>
             ) : (
               <div className="text-sm">Select a tab from the sidebar</div>
-            )}
-          </div>
+            )} */}
         </div>
       </div>
 

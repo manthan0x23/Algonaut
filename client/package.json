@@ -10,6 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@automerge/automerge": "^2.2.9",
+    "@automerge/react": "^2.0.8",
     "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-dialog": "^1.1.14",
@@ -24,7 +26,7 @@
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/react-query": "^5.66.5",
     "@tanstack/react-query-devtools": "^5.66.5",
-    "@tanstack/react-router": "^1.121.2",
+    "@tanstack/react-router": "^1.127.3",
     "@tanstack/react-router-devtools": "^1.121.2",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/router-plugin": "^1.121.2",
@@ -44,6 +46,8 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.0.6",
     "tailwindcss-animate": "^1.0.7",
+    "y-monaco": "^0.1.6",
+    "yjs": "^13.6.27",
     "zod": "^3.25.75",
     "zustand": "^5.0.6"
   },
@@ -57,6 +61,7 @@
     "jsdom": "^26.0.0",
     "typescript": "^5.7.2",
     "vite": "^6.1.0",
+    "vite-plugin-wasm": "^3.5.0",
     "vitest": "^3.0.5",
     "web-vitals": "^4.2.4"
   }

@@ -1,5 +1,5 @@
 use crate::websocket::models::lobby::{Connect, Disconnect, Lobby};
-use actix::{Actor, ActorContext, Addr, AsyncContext};
+use actix::{Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, fut::wrap_future};
 use actix_web_actors::ws;
 use common::types::{
     room::RoomId,
@@ -54,18 +54,22 @@ impl Actor for WsConnection {
     fn started(&mut self, ctx: &mut Self::Context) {
         self.start_heartbeat(ctx);
 
-        self.lobby.do_send(Connect {
+       let fut = self.lobby.send(Connect {
             room: self.room.clone(),
             connection: self.session.clone(),
             addr: ctx.address(),
             role: self.role.clone(),
         });
+
+        ctx.spawn(wrap_future(fut).map(|_res, _actor, _ctx| ()));
     }
 
-    fn stopped(&mut self, _: &mut Self::Context) {
-        self.lobby.do_send(Disconnect {
+    fn stopped(&mut self, ctx: &mut Self::Context) {
+        let fut = self.lobby.send(Disconnect {
             room: self.room.clone(),
             session: self.session.clone(),
         });
+
+        ctx.spawn(wrap_future(fut).map(|_res, _actor, _ctx| ()));
     }
 }

@@ -17,7 +17,7 @@ const Layout = () => {
           </Link>
         </div>
         <div className="flex gap-5 items-center h-full  text-xs">
-          <ThemeSwitch className="my-auto" />
+          <ThemeSwitch className="my-auto" showSwitch />
           <AuthOption />
         </div>
       </section>

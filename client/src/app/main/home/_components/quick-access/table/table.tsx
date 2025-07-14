@@ -3,18 +3,9 @@ import {
   useReactTable,
   flexRender,
 } from "@tanstack/react-table";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { userRoomsColumns } from "./columns";
 import type { GetUserRoomsResponseT } from "@/integrations/api/rooms/get-room";
-import { Button } from "@/components/ui/button";
 import { RoomTableControls } from "./controls";
 import { ArrowRight } from "lucide-react";
 import { useRouter } from "@tanstack/react-router";

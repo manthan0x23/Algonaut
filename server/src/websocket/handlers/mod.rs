@@ -1,14 +1,18 @@
-use actix::{ActorContext, AsyncContext, StreamHandler, fut::wrap_future};
+use actix::fut::{ActorFutureExt, wrap_future};
+use actix::{ActorContext, AsyncContext, StreamHandler};
 use actix_web_actors::ws;
 use common::types::session::UserMinimal;
 use std::time::Instant;
+use tracing::warn;
 
+use crate::websocket::models::lobby::HandleChat;
 use crate::websocket::models::{
-    connection::WsConnection, incomming::IncomingMessage, lobby::HandleChat,
+    connection::WsConnection, incomming::IncomingMessage, lobby::HandleCrdtUpdate,
 };
 
 mod chat;
 mod connection;
+mod crdt;
 mod error;
 mod execution;
 
@@ -21,7 +25,6 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
             email: Some(sender.user.email),
             avatar_url: sender.user.avatar_url,
         };
-        let lobby_addr = self.lobby.clone();
         let room_id = self.room.clone();
 
         match item {
@@ -34,17 +37,30 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
             }
             Ok(ws::Message::Text(text)) => match serde_json::from_str::<IncomingMessage>(&text) {
                 Ok(IncomingMessage::Chat(chat_data)) => {
-                    ctx.spawn(wrap_future(async move {
-                        let _ = lobby_addr
-                            .send(HandleChat {
-                                chat_data,
-                                sender,
-                                room_id,
-                            })
-                            .await;
-                    }));
+                    self.lobby.do_send(HandleChat {
+                        chat_data,
+                        sender,
+                        room_id,
+                    });
                 }
-                Err(_) => ctx.text("error: invalid JSON"),
+                Ok(IncomingMessage::Crdt(crdt)) => {
+                    self.lobby.do_send(HandleCrdtUpdate {
+                        update: crdt.update,
+                        sender,
+                        room_id,
+                    });
+                }
+                Ok(IncomingMessage::Ping) => {
+                    let pong_msg = serde_json::json!({ "type": "pong" });
+                    match serde_json::to_string(&pong_msg) {
+                        Ok(text) => ctx.text(text),
+                        Err(_) => ctx.text("error: failed to serialize pong"),
+                    }
+                }
+                Err(_) => {
+                    warn!("{:?} : {:?} : {:?}", text, sender.clone(), room_id);
+                    ctx.text("error: invalid JSON");
+                }
             },
             Ok(ws::Message::Close(reason)) => {
                 ctx.close(reason);

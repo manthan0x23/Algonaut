@@ -32,7 +32,10 @@ export const AuthOption = () => {
           <DropdownMenuTrigger className="p-0 w-full outline-none">
             <div className="text-sm h-full font-medium flex items-center gap-3 cursor-pointer px-4 hover:scale-[1.02] transform-all">
               <p>{session.user.name ?? session.user.email}</p>
-              <ProfileImage image={session.user.avatar_url} />
+              <ProfileImage
+                image={session.user.avatar_url}
+                label={session.user.name ?? session.user.email}
+              />
               <ChevronDown size={13} className="text-muted-foreground" />
             </div>
           </DropdownMenuTrigger>

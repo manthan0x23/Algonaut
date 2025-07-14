@@ -1,4 +1,5 @@
 use actix::{Actor, Addr, Context, Handler, Message, MessageResult};
+use automerge;
 use common::{
     id::ShortId,
     storage::AwsS3,
@@ -7,16 +8,20 @@ use common::{
         session::{SessionClaim, UserMinimal, UserRoomType},
     },
 };
+use dashmap::DashMap;
 use redis::connect::RedisConnectionPool;
 use sea_orm::DatabaseConnection;
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::Hash, sync::{Arc, Mutex}};
 
 use crate::{
     utils::app_state::AppEnv,
     websocket::models::{connection::WsConnection, incomming::IncomingChat, outgoing::RoomMember},
 };
 
-pub type Room = HashMap<ShortId, (Addr<WsConnection>, RoomMember)>;
+pub type Room = (
+    HashMap<ShortId, (Addr<WsConnection>, RoomMember)>,
+    Arc<Mutex<automerge::AutoCommit>>,
+);
 
 #[derive(Clone, Debug)]
 pub struct Lobby {
@@ -47,6 +52,14 @@ pub struct Disconnect {
 #[rtype(result = "()")]
 pub struct HandleChat {
     pub chat_data: IncomingChat,
+    pub sender: UserMinimal,
+    pub room_id: RoomId,
+}
+
+#[derive(Message, Debug, Clone)]
+#[rtype(result = "()")]
+pub struct HandleCrdtUpdate {
+    pub update: Vec<Vec<u8>>,
     pub sender: UserMinimal,
     pub room_id: RoomId,
 }

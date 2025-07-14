@@ -1,69 +1,117 @@
 import { Env } from "@/lib/env";
-import { IncomingMessage } from "./dtos/incomming";
+import type { IncomingMessage } from "./dtos/incomming";
 
-type MessageCallback = (msg: IncomingMessage) => void;
+export type MessageCallback = (msg: IncomingMessage) => void;
 
-export class WebSocketConnection {
-  /** 
-  16 zeros string with a hash `#0000000000000000` **/
-  public static SYSTEM_ID = "#00000000000000000";
-
-  private _socket: null | WebSocket = null;
-  private readonly roomId: string;
+export class WsClient {
+  private static instance: WsClient;
+  private socket: WebSocket | null = null;
+  private roomId: string | null = null;
   private listeners = new Set<MessageCallback>();
-  private readonly WS_URL: string;
+  private reconnectAttempts = 0;
+  private maxReconnects = 5;
+  private pingInterval: ReturnType<typeof setInterval> | null = null;
 
-  constructor(roomId: string) {
-    this.roomId = roomId;
-    this.WS_URL = Env.ws_url;
+  static getInstance() {
+    if (!WsClient.instance) {
+      WsClient.instance = new WsClient();
+    }
+    return WsClient.instance;
   }
 
-  public connect() {
-    this._socket = new WebSocket(`${this.WS_URL}/${this.roomId}`);
+  connect(roomId: string) {
+    if (
+      this.socket &&
+      this.socket.readyState === WebSocket.OPEN &&
+      this.roomId === roomId
+    ) {
+      console.log(`[WS:${roomId}] Already connected`);
+      return;
+    }
 
-    this._socket.onopen = () => {
-      console.log("[WS] Connected");
+    this.roomId = roomId;
+    const WS_URL = `${Env.ws_url}/${roomId}`;
+    console.log(`[WS:${roomId}] Connecting to ${WS_URL}...`);
+
+    this.socket = new WebSocket(WS_URL);
+
+    this.socket.onopen = () => {
+      console.log(`[WS:${roomId}] Connected`);
+      this.reconnectAttempts = 0;
+      this.startHeartbeat();
     };
 
-    this._socket.onmessage = (event) => {
+    this.socket.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
-        console.log(data);
-        const parsed = IncomingMessage.safeParse(data);
-
-        if (parsed.success) {
-          switch (parsed.data.iden) {
-            case "chat":
-
-            case "broadcast":
-
-            case "error":
-
-            case "room_members":
-
-            default:
-              break;
-          }
-        }
+        const data = JSON.parse(event.data) as IncomingMessage;
+        this.listeners.forEach((cb) => cb(data));
       } catch (err) {
-        console.error("[WS] Failed to parse message:", err);
+        console.error(`[WS:${roomId}] Failed to parse message:`, err);
       }
     };
 
-    this._socket.onclose = () => {
-      console.log("[WS] Disconnected");
+    this.socket.onclose = () => {
+      console.log(`[WS:${roomId}] Disconnected`);
+      this.stopHeartbeat();
+      if (this.reconnectAttempts < this.maxReconnects) {
+        this.reconnectAttempts++;
+        const delay = Math.min(1000 * this.reconnectAttempts, 10000);
+        console.log(`[WS:${roomId}] Attempting reconnect in ${delay}ms`);
+        setTimeout(() => this.connect(roomId), delay);
+      }
     };
 
-    this._socket.onerror = (e) => {
-      console.error("[WS] Error:", e);
+    this.socket.onerror = (err) => {
+      console.error(`[WS:${roomId}] Error:`, err);
     };
   }
 
-  public disconnect() {
-    if (this._socket) this._socket.close();
+  disconnect() {
+    console.log(`[WS] Disconnected manually`);
+    this.socket?.close();
+    this.stopHeartbeat();
+    this.socket = null;
+    this.roomId = null;
   }
 
-  get socket() {
-    return this._socket;
+  send(data: any) {
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify(data));
+    } else {
+      console.warn(`[WS] Cannot send, socket not open`);
+    }
+  }
+
+  addListener(cb: MessageCallback) {
+    this.listeners.add(cb);
+  }
+
+  removeListener(cb: MessageCallback) {
+    this.listeners.delete(cb);
+  }
+
+  private startHeartbeat() {
+    this.pingInterval = setInterval(() => {
+      if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+        this.socket.send(JSON.stringify({ type: "ping" }));
+      }
+    }, 15_000);
+  }
+
+  private stopHeartbeat() {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+  }
+
+  get isConnected() {
+    return !!this.socket && this.socket.readyState === WebSocket.OPEN;
+  }
+
+  get currentRoom() {
+    return this.roomId;
   }
 }
+
+export const wsClient = WsClient.getInstance();

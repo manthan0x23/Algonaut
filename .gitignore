@@ -11,3 +11,5 @@ routeTree.gen.ts
 .vscode
 
 target
+
+.idea
