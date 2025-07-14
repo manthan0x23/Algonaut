@@ -1,18 +1,14 @@
-use actix::fut::{ActorFutureExt, wrap_future};
-use actix::{ActorContext, AsyncContext, StreamHandler};
+use actix::{ActorContext, StreamHandler};
 use actix_web_actors::ws;
 use common::types::session::UserMinimal;
 use std::time::Instant;
 use tracing::warn;
 
 use crate::websocket::models::lobby::HandleChat;
-use crate::websocket::models::{
-    connection::WsConnection, incomming::IncomingMessage, lobby::HandleCrdtUpdate,
-};
+use crate::websocket::models::{connection::WsConnection, incomming::IncomingMessage};
 
 mod chat;
 mod connection;
-mod crdt;
 mod error;
 mod execution;
 
@@ -37,15 +33,8 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
             }
             Ok(ws::Message::Text(text)) => match serde_json::from_str::<IncomingMessage>(&text) {
                 Ok(IncomingMessage::Chat(chat_data)) => {
-                    self.lobby.do_send(HandleChat {
+                    let _ = self.lobby.do_send(HandleChat {
                         chat_data,
-                        sender,
-                        room_id,
-                    });
-                }
-                Ok(IncomingMessage::Crdt(crdt)) => {
-                    self.lobby.do_send(HandleCrdtUpdate {
-                        update: crdt.update,
                         sender,
                         room_id,
                     });
@@ -59,7 +48,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                 }
                 Err(_) => {
                     warn!("{:?} : {:?} : {:?}", text, sender.clone(), room_id);
-                    ctx.text("error: invalid JSON");
+                    let _ = ctx.text("error: invalid JSON");
                 }
             },
             Ok(ws::Message::Close(reason)) => {
@@ -67,7 +56,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                 ctx.stop();
             }
             Ok(ws::Message::Binary(_)) => {
-                ctx.text("error: binary not supported");
+                let _ = ctx.text("error: binary not supported");
             }
             _ => {}
         }

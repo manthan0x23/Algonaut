@@ -6,9 +6,12 @@ use common::types::{
     session::{SessionClaim, UserRoomType},
 };
 use std::time::{Duration, Instant};
+use tracing::debug;
 
 pub const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 pub const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
+
+pub const ACTOR_MAILBOX_CAPACITY: usize = 128;
 
 #[derive(Clone, Debug)]
 pub struct WsConnection {
@@ -53,23 +56,37 @@ impl Actor for WsConnection {
 
     fn started(&mut self, ctx: &mut Self::Context) {
         self.start_heartbeat(ctx);
+        ctx.set_mailbox_capacity(ACTOR_MAILBOX_CAPACITY);
 
-       let fut = self.lobby.send(Connect {
+        debug!(
+            "Connect is actor {:?} {:?}",
+            self.room.clone(),
+            self.session.clone()
+        );
+
+        match self.lobby.try_send(Connect {
             room: self.room.clone(),
             connection: self.session.clone(),
             addr: ctx.address(),
             role: self.role.clone(),
-        });
-
-        ctx.spawn(wrap_future(fut).map(|_res, _actor, _ctx| ()));
+        }) {
+            Ok(_) => debug!("Connect sent to Lobby"),
+            Err(err) => {
+                eprintln!("Failed to send Connect to Lobby: {:?}", err);
+            }
+        }
     }
 
-    fn stopped(&mut self, ctx: &mut Self::Context) {
-        let fut = self.lobby.send(Disconnect {
+    fn stopped(&mut self, _ctx: &mut Self::Context) {
+        // Only notify lobby; don't call ctx.stop() here
+        let _ = self.lobby.do_send(Disconnect {
             room: self.room.clone(),
             session: self.session.clone(),
         });
-
-        ctx.spawn(wrap_future(fut).map(|_res, _actor, _ctx| ()));
+        // Optionally: log disconnect for debugging
+        println!(
+            "WsConnection stopped for user {} in room {}",
+            self.session.uid, self.room
+        );
     }
 }

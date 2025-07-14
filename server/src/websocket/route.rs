@@ -1,14 +1,12 @@
-use crate::{
-    utils::{app_state::AppState, web::errors::AppError},
-    websocket::models::connection::WsConnection,
-};
 use actix_web::{HttpRequest, HttpResponse, web};
 use actix_web_actors::ws;
-use common::types::session::{SessionClaim, UserRoomType};
-use sea_orm::{ColumnTrait, Condition};
+use sea_orm::{ColumnTrait, Condition, EntityTrait, QueryFilter};
+use tracing::{error, info};
 
-use database::entity::{room as Room, user_room as UserRoom};
-use sea_orm::{EntityTrait, QueryFilter};
+use crate::utils::{app_state::AppState, web::errors::AppError};
+use crate::websocket::models::connection::WsConnection;
+use common::types::session::{SessionClaim, UserRoomType};
+use database::entity::{room as RoomEntity, user_room as UserRoomEntity};
 
 pub async fn ws_handler(
     path: web::Path<String>,
@@ -17,57 +15,65 @@ pub async fn ws_handler(
     session: SessionClaim,
     app_state: web::Data<AppState>,
 ) -> Result<HttpResponse, AppError> {
-    let db = &app_state.database;
-    let room_id = path.into_inner();
-    let lobby = &app_state.lobby;
+    let room_id_str = path.into_inner();
+    let room_id = room_id_str.clone();
 
-    let role: UserRoomType;
+    // Lookup room
+    let room_model = RoomEntity::Entity::find()
+        .filter(RoomEntity::Column::Id.eq(room_id.clone()))
+        .one(&app_state.database)
+        .await
+        .map_err(|e| {
+            error!("DB error fetching room {}: {:#?}", room_id, e);
+            AppError::internal_server_error("Failed to lookup room")
+        })?;
 
-    {
-        let room: Option<Room::Model> = Room::Entity::find()
-            .filter(Room::Column::Id.eq(room_id.clone()))
-            .one(db)
+    let room = room_model.ok_or_else(|| {
+        error!("Room not found: {}", room_id);
+        AppError::not_found("Room does not exist")
+    })?;
+
+    // Determine user role
+    let role = if room.created_by == session.uid {
+        UserRoomType::Creator
+    } else {
+        // check membership
+        let membership = UserRoomEntity::Entity::find()
+            .filter(
+                Condition::all()
+                    .add(UserRoomEntity::Column::RoomId.eq(room.id.clone()))
+                    .add(UserRoomEntity::Column::UserId.eq(session.uid.clone())),
+            )
+            .one(&app_state.database)
             .await
-            .map_err(|_| AppError::internal_server_error("Error processing join"))?;
+            .map_err(|e| {
+                error!(
+                    "DB error fetching membership for {} in {}: {:#?}",
+                    session.uid, room.id, e
+                );
+                AppError::internal_server_error("Failed to verify membership")
+            })?;
 
-        let room: Room::Model = match room {
-            Some(r) => r,
-            None => {
-                return Err(AppError::not_found("Room doesn't exists"));
-            }
-        };
+        let membership = membership.ok_or_else(|| {
+            error!("Unauthorized: {} tried to join {}", session.uid, room.id);
+            AppError::unauthorized("User not associated with the room")
+        })?;
 
-        if room.created_by != session.uid {
-            let user_room: Option<UserRoom::Model> = UserRoom::Entity::find()
-                .filter(
-                    Condition::all()
-                        .add(UserRoom::Column::RoomId.eq(room.id))
-                        .add(UserRoom::Column::UserId.eq(session.uid.clone())),
-                )
-                .one(db)
-                .await
-                .map_err(|_| AppError::internal_server_error("Error processing join"))?;
-
-            let user_room = match user_room {
-                Some(u_r) => u_r,
-                None => {
-                    return Err(AppError::unauthorized("User not associated with the room"));
-                }
-            };
-
-            if user_room.r#type == UserRoomType::Viewer.to_string() {
-                role = UserRoomType::Viewer;
-            } else {
-                role = UserRoomType::Editor
-            }
-        } else {
-            role = UserRoomType::Creator;
+        // Map string to enum
+        match membership.r#type.as_str() {
+            t if t.eq_ignore_ascii_case(&UserRoomType::Viewer.to_string()) => UserRoomType::Viewer,
+            _ => UserRoomType::Editor,
         }
-    }
+    };
 
-    let connection = WsConnection::new(session, room_id.clone(), role.clone(), lobby.clone());
+    info!(
+        "User {} joining room {} as {:?}",
+        session.uid, room_id, role
+    );
 
-    ws::start(connection, &req, stream).map_err(|e| {
-        AppError::service_unavailable(&format!("Error serving sockets {}", e.to_string()))
+    let ws_conn = WsConnection::new(session, room_id, role, app_state.lobby.clone());
+    ws::start(ws_conn, &req, stream).map_err(|e| {
+        error!("WebSocket upgrade failed: {:#?}", e);
+        AppError::service_unavailable("WebSocket service unavailable")
     })
 }

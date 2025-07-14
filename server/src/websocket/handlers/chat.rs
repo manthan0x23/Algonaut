@@ -23,7 +23,7 @@ impl Handler<HandleChat> for Lobby {
         let chat_data = msg.chat_data.clone();
 
         let room_id = msg.room_id.clone();
-        let (room, _doc) = match self.rooms.get(&room_id) {
+        let room = match self.rooms.get(&room_id) {
             Some(r) => r.clone(),
             None => return,
         };
@@ -87,7 +87,7 @@ impl Handler<HandleChat> for Lobby {
             };
 
             for entry in room.iter() {
-                let (_peer_uid, (ws_conn, mm)) = entry;
+                let (ws_conn, mm) = entry.value();
                 debug!("TO :: {:?}", mm);
                 if ws_conn.send(WsText(json.clone())).await.is_err() {
                     continue;

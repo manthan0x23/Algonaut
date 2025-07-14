@@ -70,16 +70,6 @@ pub async fn get_room_chats_for_user(
         .order_by_desc(Chat::Column::CreatedAt)
         .paginate(db, Chat::PAGE_SIZE);
 
-    let total_items = paginator
-        .num_items()
-        .await
-        .map_err(|e| AppError::internal_server_error(&format!("Failed to count chats: {}", e)))?;
-
-    let total_pages = paginator
-        .num_pages()
-        .await
-        .map_err(|e| AppError::internal_server_error(&format!("Failed to compute pages: {}", e)))?;
-
     let chats_with_users = Chat::Entity::find()
         .filter(Chat::Column::RoomId.eq(room_id))
         .order_by_desc(Chat::Column::CreatedAt)
@@ -114,8 +104,8 @@ pub async fn get_room_chats_for_user(
 
     let response = GetRoomChatsResponse {
         chats,
-        total_items,
-        total_pages,
+        total_items: 0,
+        total_pages: 0,
     };
 
     let api_resp: ApiResponse<GetRoomChatsResponse> = ApiResponse::ok("Fetched chats", response);

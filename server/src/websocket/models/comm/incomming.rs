@@ -9,7 +9,6 @@ use crate::websocket::models::outgoing::ChatMessageType;
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum IncomingMessage {
     Chat(IncomingChat),
-    Crdt(IncommingCrdtUpdate),
     Ping,
 }
 

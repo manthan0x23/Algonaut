@@ -1,5 +1,4 @@
-use actix::{Actor, Addr, Context, Handler, Message, MessageResult};
-use automerge;
+use actix::{Actor, Addr, Context, Message};
 use common::{
     id::ShortId,
     storage::AwsS3,
@@ -11,21 +10,21 @@ use common::{
 use dashmap::DashMap;
 use redis::connect::RedisConnectionPool;
 use sea_orm::DatabaseConnection;
-use std::{collections::HashMap, hash::Hash, sync::{Arc, Mutex}};
+use std::sync::Arc;
+use tracing::debug;
 
 use crate::{
     utils::app_state::AppEnv,
     websocket::models::{connection::WsConnection, incomming::IncomingChat, outgoing::RoomMember},
 };
 
-pub type Room = (
-    HashMap<ShortId, (Addr<WsConnection>, RoomMember)>,
-    Arc<Mutex<automerge::AutoCommit>>,
-);
+pub type Room = Arc<DashMap<ShortId, (Addr<WsConnection>, RoomMember)>>;
+
+pub type SharedRooms = Arc<DashMap<RoomId, Room>>;
 
 #[derive(Clone, Debug)]
 pub struct Lobby {
-    pub rooms: HashMap<RoomId, Room>,
+    pub rooms: SharedRooms,
     pub database: DatabaseConnection,
     pub redis_pool: RedisConnectionPool,
     pub env: AppEnv,
@@ -71,8 +70,9 @@ impl Lobby {
         env: &AppEnv,
         storage: &AwsS3,
     ) -> Self {
+        debug!("Logging lobyy creation");
         Self {
-            rooms: HashMap::new(),
+            rooms: Arc::new(DashMap::new()),
             database: db.clone(),
             redis_pool: redis.clone(),
             env: env.clone(),

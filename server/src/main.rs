@@ -45,7 +45,7 @@ async fn main() -> std::io::Result<()> {
 
     let bind_server = (app_env.address.clone(), app_env.port.clone());
 
-    let db = match database::connect::connect_and_migrate(&app_env.database_url.clone()).await {
+    let db = match database::connect::connect(&app_env.database_url.clone()).await {
         Ok(conn) => {
             info!("Connected to PostgreSQL");
             conn
@@ -96,8 +96,8 @@ async fn main() -> std::io::Result<()> {
         database: db.clone(),
         redis_pool: redis_pool.clone(),
         env: app_env.clone(),
-        lobby: lobby,
-        storage: storage,
+        lobby: lobby.clone(),
+        storage: storage.clone(),
     });
 
     HttpServer::new(move || {
@@ -121,7 +121,6 @@ async fn main() -> std::io::Result<()> {
             )
     })
     .bind(bind_server)?
-    .workers(1)
     .run()
     .await
 }

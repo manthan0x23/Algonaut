@@ -3,8 +3,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use actix::Handler;
+use actix::{ActorContext, Handler};
 use actix_web_actors::ws;
+use dashmap::DashMap;
+use tracing::debug;
 
 use crate::websocket::models::{
     WsText,
@@ -17,57 +19,53 @@ impl Handler<Connect> for Lobby {
     type Result = ();
 
     fn handle(&mut self, msg: Connect, _: &mut Self::Context) {
-        let mut entry = self.rooms.entry(msg.room.clone()).or_insert_with(|| {
-            let doc = Arc::new(Mutex::new(automerge::AutoCommit::new()));
-            (HashMap::new(), doc)
-        });
-
-        let (room, _doc) = &mut *entry;
-
-        let new_member = RoomMember {
-            name: msg.connection.user.name.clone(),
-            email: msg.connection.user.email.clone(),
-            role: msg.role.clone(),
-            uid: msg.connection.uid.clone(),
-        };
-
-        room.insert(
-            msg.connection.uid.clone(),
-            (msg.addr.clone(), new_member.clone()),
+        println!(
+            ">> Connect received in Lobby Handler for room: {}",
+            msg.room
         );
 
-        let user_name = msg
-            .connection
+        let Connect {
+            room,
+            connection,
+            addr,
+            role,
+        } = msg;
+
+        debug!("Connect is handler {:?} {:?}", room, connection);
+        // Insert room if doesn't exist
+        let entry = self
+            .rooms
+            .entry(room.clone())
+            .or_insert_with(|| Arc::new(DashMap::new()));
+
+        let users = entry.value();
+
+        let member = RoomMember {
+            uid: connection.uid.clone(),
+            name: connection.user.name.clone(),
+            email: connection.user.email.clone(),
+            role: role.clone(),
+        };
+
+        users.insert(connection.uid.clone(), (addr.clone(), member.clone()));
+
+        // Broadcast join message and updated member list
+        let name = connection
             .user
             .name
-            .clone()
-            .unwrap_or(msg.connection.user.email.clone());
-
-        let announce_message = format!("{} joined the space", user_name);
-
-        let broadcast = OutgoingMessage::Broadcast(Broadcast::announce(announce_message));
-        let broadcast_json = serde_json::to_string(&broadcast).unwrap_or_default();
-
-        let members = OutgoingMessage::RoomMembers(RoomMembers::announce(
-            room.iter()
-                .map(|entry| {
-                    let (uid, (_ws_conn, member)) = entry;
-                    RoomMember {
-                        uid: uid.clone(),
-                        name: member.name.clone(),
-                        email: member.email.clone(),
-                        role: member.role.clone(),
-                    }
-                })
-                .collect(),
+            .unwrap_or_else(|| connection.user.email.clone());
+        let join_msg =
+            OutgoingMessage::Broadcast(Broadcast::announce(format!("{name} joined the space")));
+        let member_list = OutgoingMessage::RoomMembers(RoomMembers::announce(
+            users.iter().map(|entry| entry.value().1.clone()).collect(),
         ));
 
-        let members_json = serde_json::to_string(&members).unwrap_or_default();
+        let join_json = serde_json::to_string(&join_msg).unwrap_or_default();
+        let members_json = serde_json::to_string(&member_list).unwrap_or_default();
 
-        for entry in room.iter() {
-            let (_, (ws_conn, _)) = entry;
-            ws_conn.do_send(WsText(broadcast_json.clone()));
-            ws_conn.do_send(WsText(members_json.clone()));
+        for ws in users.iter() {
+            let _ = ws.value().0.do_send(WsText(join_json.clone()));
+            let _ = ws.value().0.do_send(WsText(members_json.clone()));
         }
     }
 }
@@ -75,48 +73,36 @@ impl Handler<Connect> for Lobby {
 impl Handler<Disconnect> for Lobby {
     type Result = ();
 
-    fn handle(&mut self, msg: Disconnect, _: &mut Self::Context) {
-        if let Some(mut entry) = self.rooms.get_mut(&msg.room) {
-            let (room, _doc) = &mut *entry;
+    fn handle(&mut self, msg: Disconnect, ctx: &mut Self::Context) {
+        if let Some(room_entry) = self.rooms.get(&msg.room) {
+            let users = room_entry.value();
 
-            // Remove the user if present
-            if room.remove(&msg.session.uid).is_some() {
-                let user_name = msg
-                    .session
-                    .user
-                    .name
-                    .clone()
-                    .unwrap_or(msg.session.user.email.clone());
+            let name = msg
+                .session
+                .user
+                .name
+                .clone()
+                .unwrap_or_else(|| msg.session.user.email.clone());
 
-                let announce_message = format!("{} left the space", user_name);
-
-                let broadcast = OutgoingMessage::Broadcast(Broadcast::announce(announce_message));
-                let broadcast_json = serde_json::to_string(&broadcast).unwrap_or_default();
-
-                let members = OutgoingMessage::RoomMembers(RoomMembers::announce(
-                    room.iter()
-                        .map(|entry| {
-                            let (uid, (_, member)) = entry;
-                            RoomMember {
-                                uid: uid.clone(),
-                                name: member.name.clone(),
-                                email: member.email.clone(),
-                                role: member.role.clone(),
-                            }
-                        })
-                        .collect(),
+            if users.remove(&msg.session.uid).is_some() {
+                let leave_msg = OutgoingMessage::Broadcast(Broadcast::announce(format!(
+                    "{name} left the space"
+                )));
+                let member_list = OutgoingMessage::RoomMembers(RoomMembers::announce(
+                    users.iter().map(|entry| entry.value().1.clone()).collect(),
                 ));
 
-                let members_json = serde_json::to_string(&members).unwrap_or_default();
+                let leave_json = serde_json::to_string(&leave_msg).unwrap_or_default();
+                let members_json = serde_json::to_string(&member_list).unwrap_or_default();
 
-                for entry in room.iter() {
-                    let (_, (ws_conn, _)) = entry;
-                    ws_conn.do_send(WsText(broadcast_json.clone()));
-                    ws_conn.do_send(WsText(members_json.clone()));
+                for ws in users.iter() {
+                    let _ = ws.value().0.do_send(WsText(leave_json.clone()));
+                    let _ = ws.value().0.do_send(WsText(members_json.clone()));
                 }
             }
 
-            if room.is_empty() {
+            // Remove room if empty
+            if users.is_empty() {
                 self.rooms.remove(&msg.room);
             }
         }
@@ -127,6 +113,6 @@ impl Handler<WsText> for WsConnection {
     type Result = ();
 
     fn handle(&mut self, msg: WsText, ctx: &mut ws::WebsocketContext<Self>) {
-        ctx.text(msg.0);
+        let _ = ctx.text(msg.0);
     }
 }
