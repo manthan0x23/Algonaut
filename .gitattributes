@@ -1,7 +1,0 @@
-# Exclude some TypeScript files from language stats
-*.spec.ts linguist-documentation
-*.test.ts linguist-documentation
-tests/** linguist-documentation
-
-# Prioritize Rust in src
-src/**/*.rs linguist-language=Rust
