@@ -31,6 +31,11 @@ pub enum UserRoomType {
     Editor,
 }
 
+
+impl UserRoomType {
+    
+}
+
 impl fmt::Display for UserRoomType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
@@ -40,6 +45,9 @@ impl fmt::Display for UserRoomType {
         };
         write!(f, "{}", s)
     }
+
+
+
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

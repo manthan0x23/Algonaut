@@ -36,9 +36,10 @@ impl MigrationTrait for Migration {
                     .col(string(UserRoom::Id).primary_key().not_null())
                     .col(string(UserRoom::UserId).not_null())
                     .col(string(UserRoom::RoomId).not_null())
-                    .col(string(UserRoom::Type).not_null())
+                    .col(string(UserRoom::Type).custom(UserRoomTypeEnum).not_null())
                     .col(
                         string(UserRoom::Status)
+                            .custom(UserRoomStatusEnum)
                             .not_null()
                             .default(UserRoomStatusVariants::Joined.to_string()),
                     )
@@ -74,6 +75,9 @@ pub enum UserRoomTypeVariants {
 
     #[iden = "editor"]
     Editor,
+
+    #[iden = "creator"]
+    Creator,
 }
 
 #[derive(Iden)]

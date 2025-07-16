@@ -15,54 +15,32 @@ pub async fn ws_handler(
     session: SessionClaim,
     app_state: web::Data<AppState>,
 ) -> Result<HttpResponse, AppError> {
+    let db = &app_state.database;
     let room_id_str = path.into_inner();
     let room_id = room_id_str.clone();
 
-    // Lookup room
-    let room_model = RoomEntity::Entity::find()
-        .filter(RoomEntity::Column::Id.eq(room_id.clone()))
-        .one(&app_state.database)
+    let role = UserRoomEntity::Entity::find()
+        .filter(
+            Condition::all().add(
+                UserRoomEntity::Column::UserId
+                    .eq(session.uid.clone())
+                    .add(UserRoomEntity::Column::RoomId.eq(room_id)),
+            ),
+        )
+        .one(db)
         .await
         .map_err(|e| {
-            error!("DB error fetching room {}: {:#?}", room_id, e);
-            AppError::internal_server_error("Failed to lookup room")
+            AppError::service_unavailable(&format!("Error finding user-room , {}", e.to_string()))
         })?;
 
-    let room = room_model.ok_or_else(|| {
-        error!("Room not found: {}", room_id);
-        AppError::not_found("Room does not exist")
-    })?;
-
-    // Determine user role
-    let role = if room.created_by == session.uid {
-        UserRoomType::Creator
-    } else {
-        // check membership
-        let membership = UserRoomEntity::Entity::find()
-            .filter(
-                Condition::all()
-                    .add(UserRoomEntity::Column::RoomId.eq(room.id.clone()))
-                    .add(UserRoomEntity::Column::UserId.eq(session.uid.clone())),
-            )
-            .one(&app_state.database)
-            .await
-            .map_err(|e| {
-                error!(
-                    "DB error fetching membership for {} in {}: {:#?}",
-                    session.uid, room.id, e
-                );
-                AppError::internal_server_error("Failed to verify membership")
-            })?;
-
-        let membership = membership.ok_or_else(|| {
-            error!("Unauthorized: {} tried to join {}", session.uid, room.id);
-            AppError::unauthorized("User not associated with the room")
-        })?;
-
-        // Map string to enum
-        match membership.r#type.as_str() {
-            t if t.eq_ignore_ascii_case(&UserRoomType::Viewer.to_string()) => UserRoomType::Viewer,
-            _ => UserRoomType::Editor,
+    let role = match role {
+        Some(r) => UserRoomType(&r.r#type).map_err(|_| {
+            AppError::service_unavailable("Invalid user room type")
+        })?,
+        None => {
+            return Err(AppError::not_found(
+                "User associated with the room not found or vice versa",
+            ));
         }
     };
 

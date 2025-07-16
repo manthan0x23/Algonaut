@@ -34,6 +34,7 @@ impl MigrationTrait for Migration {
                             RoomScopeTypeEnum,
                             RoomScopeTypeVariants::iter(),
                         )
+                        .custom(RoomScopeTypeEnum)
                         .not_null()
                         .default(RoomScopeTypeVariants::Strict.to_string()),
                     )
@@ -50,6 +51,7 @@ impl MigrationTrait for Migration {
                             RoomScopeTypeEnum,
                             RoomScopeTypeVariants::iter(),
                         )
+                        .custom(RoomScopeTypeEnum)
                         .default(RoomScopeTypeVariants::Open.to_string()),
                     )
                     .col(
