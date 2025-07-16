@@ -132,17 +132,3 @@ This will start polling Redis every 10 seconds and orchestrate containers dynami
 
 ---
 
-## 📜 License
-
-MIT License.  
-Built with 🦀 and ☕ by [Your Name]
-
----
-
-## 📣 Contributions
-
-Open to PRs, suggestions, and extensions. You can help by:
-
-- Building runtime containers for more languages
-- Improving performance and sandboxing
-- Adding devtools and monitoring dashboards
