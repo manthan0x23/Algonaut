@@ -1,9 +1,9 @@
 # ⚙️ Algonaut
 
-<video width="100%" controls>
-  <source src="https://ddeyu86yrwm5f.cloudfront.net/algonaut-record.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+
+
+https://github.com/user-attachments/assets/fd37a4dc-ffb9-44e8-b0a1-7b2a1a97c62c
+
 
 
 **Algonaut** is an on-demand, container-based **code execution editor** platform. Each editor session is called a **cube**, which runs in its own isolated Docker container, offering live sockets, persistent storage, and language-specific runtime environments.
